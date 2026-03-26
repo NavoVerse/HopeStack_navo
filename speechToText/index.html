@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScribeAI - Premium Speech-to-Text</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="container">
+        <header class="header">
+            <h1 class="title">Scribe<span>AI</span></h1>
+            <p class="subtitle">Transform your audio into crystal-clear text with AI</p>
+        </header>
+
+        <section class="upload-section glass">
+            <div id="drop-zone" class="drop-zone">
+                <div class="upload-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 16V8M12 8L9 11M12 8L15 11M3 15V16C3 17.1046 3.89543 18 5 18H19C20.1046 18 21 17.1046 21 16V15M3 9V8C3 6.89543 3.89543 6 5 6H19C20.1046 6 21 6.89543 21 8V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="upload-text">
+                    <p class="main-text">Click to upload or drag & drop</p>
+                    <p class="sub-text">MP3, WAV, M4A, FLAC (Max 25MB)</p>
+                </div>
+                <input type="file" id="file-input" accept="audio/*" hidden>
+            </div>
+            
+            <div id="file-ready" class="file-ready hidden">
+                <div class="file-info">
+                    <span class="file-name">audio-recording.mp3</span>
+                    <span class="file-size">2.4 MB</span>
+                </div>
+                <button id="transcribe-btn" class="btn btn-primary">Transcribe Now</button>
+            </div>
+        </section>
+
+        <section id="result-section" class="result-section glass hidden">
+            <div class="result-header">
+                <h3>Transcription</h3>
+                <div class="actions">
+                    <button id="copy-btn" class="btn btn-secondary btn-sm">Copy</button>
+                    <button id="clear-btn" class="btn btn-secondary btn-sm">Clear</button>
+                </div>
+            </div>
+            <div class="result-content">
+                <p id="transcription-text"></p>
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <span>Processing audio...</span>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>&copy; 2026 ScribeAI. Powered by OpenAI Whisper.</p>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

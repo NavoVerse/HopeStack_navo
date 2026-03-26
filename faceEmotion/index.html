@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceEmo | Real-time Emotion AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #050510;
+            --card: rgba(20, 20, 35, 0.7);
+            --accent: #ff007a;
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 242, 255, 0.15) 0%, transparent 40%);
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .tagline {
+            opacity: 0.6;
+            font-weight: 300;
+            margin-top: 0.5rem;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            gap: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: var(--glass);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        canvas#overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            box-shadow: 0 0 15px var(--primary);
+            z-index: 5;
+            animation: scan 3s ease-in-out infinite;
+            opacity: 0.5;
+        }
+
+        @keyframes scan {
+            0%, 100% { top: 0%; }
+            50% { top: 100%; }
+        }
+
+        .results-panel {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 122, 0.1);
+            color: #00ff7a;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .status-badge.off {
+            background: rgba(255, 0, 122, 0.1);
+            color: #ff007a;
+        }
+
+        .emotion-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .emotion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .emotion-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .emotion-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .progress-bg {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: auto;
+        }
+
+        button {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 10px 20px rgba(112, 0, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(112, 0, 255, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: white;
+        }
+
+        .btn-outline:hover {
+            background: var(--glass);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--glass);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .face-box {
+            position: absolute;
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+            border-radius: 4px;
+            pointer-events: none;
+            transition: all 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loader">
+        <div class="spinner"></div>
+        <p>Loading AI Model...</p>
+    </div>
+
+    <header>
+        <div class="logo">FaceEmo</div>
+        <p class="tagline">Next-Gen Facial Expression Analysis</p>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="video-wrapper">
+                <video id="webcam" autoplay playsinline></video>
+                <div class="scanner-line"></div>
+                <div id="face-box" class="face-box" style="display:none"></div>
+            </div>
+
+            <div class="results-panel">
+                <div class="status-badge" id="status">
+                    <span class="dot">●</span> SYSTEM READY
+                </div>
+
+                <div>
+                    <h2 class="emotion-title">Analysis Results</h2>
+                    <div id="emotion-list" class="emotion-list">
+                        <!-- Emotion bars will be injected here -->
+                        <div class="emotion-item">
+                            <div class="emotion-label">
+                                <span>Neutral</span>
+                                <span>0%</span>
+                            </div>
+                            <div class="progress-bg">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-primary" id="start-btn">START SENSORS</button>
+                    <button class="btn-outline" id="stop-btn">STOP</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const loader = document.getElementById('loader');
+        const faceBox = document.getElementById('face-box');
+        const emotionList = document.getElementById('emotion-list');
+        const statusBadge = document.getElementById('status');
+
+        let stream = null;
+        let isAnalyzing = false;
+        let intervalId = null;
+
+        // Initialize webcam
+        async function initWebcam() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: "user"
+                    } 
+                });
+                video.srcObject = stream;
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Please allow webcam access to use this application.");
+            }
+        }
+
+        async function captureAndAnalyze() {
+            if (!isAnalyzing) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Mirror image for consistency with video preview
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+            try {
+                const response = await fetch('http://localhost:8001/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    faceBox.style.display = 'none';
+                    return;
+                }
+
+                updateUI(data);
+            } catch (err) {
+                console.error("Analysis failed:", err);
+            }
+        }
+
+        function updateUI(data) {
+            // Update face box
+            const videoRect = video.getBoundingClientRect();
+            const scaleX = videoRect.width / video.videoWidth;
+            const scaleY = videoRect.height / video.videoHeight;
+
+            const { x, y, w, h } = data.face_coords;
+            faceBox.style.display = 'block';
+            faceBox.style.width = (w * scaleX) + 'px';
+            faceBox.style.height = (h * scaleY) + 'px';
+            // Since video is scaledX(-1), we need to calculate reversed X
+            faceBox.style.left = (videoRect.width - (x + w) * scaleX) + 'px';
+            faceBox.style.top = (y * scaleY) + 'px';
+
+            // Update emotions
+            emotionList.innerHTML = '';
+            data.emotions.slice(0, 5).forEach(emo => {
+                const percentage = Math.round(emo.score * 100);
+                const item = document.createElement('div');
+                item.className = 'emotion-item';
+                item.innerHTML = `
+                    <div class="emotion-label">
+                        <span>${emo.label.charAt(0).toUpperCase() + emo.label.slice(1)}</span>
+                        <span>${percentage}%</span>
+                    </div>
+                    <div class="progress-bg">
+                        <div class="progress-fill" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+                emotionList.appendChild(item);
+            });
+        }
+
+        startBtn.onclick = () => {
+            isAnalyzing = true;
+            statusBadge.innerHTML = '<span class="dot">●</span> ANALYZING...';
+            statusBadge.classList.remove('off');
+            intervalId = setInterval(captureAndAnalyze, 600);
+        };
+
+        stopBtn.onclick = () => {
+            isAnalyzing = false;
+            clearInterval(intervalId);
+            statusBadge.innerHTML = '<span class="dot">●</span> PAUSED';
+            statusBadge.classList.add('off');
+            faceBox.style.display = 'none';
+        };
+
+        initWebcam();
+    </script>
+</body>
+</html>

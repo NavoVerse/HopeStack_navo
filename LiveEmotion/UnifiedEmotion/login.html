@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveEmotion | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #050510;
+            --card: rgba(20, 20, 35, 0.7);
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 242, 255, 0.15) 0%, transparent 40%);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .logo { 
+            font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle { opacity: 0.6; font-size: 1rem; margin-bottom: 2.5rem; font-weight: 300; }
+
+        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+
+        input {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
+
+        .btn {
+            width: 100%;
+            padding: 1.1rem;
+            margin-top: 1rem;
+            border-radius: 12px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.3s;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 10px 20px rgba(112, 0, 255, 0.3);
+        }
+
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(112, 0, 255, 0.4); }
+
+        .toggle-mode { margin-top: 2rem; font-size: 0.9rem; opacity: 0.7; }
+        .toggle-mode a { color: var(--primary); text-decoration: none; font-weight: 600; cursor: pointer; }
+        .toggle-mode a:hover { text-decoration: underline; }
+
+        .error-msg { 
+            color: #ff4757; background: rgba(255, 71, 87, 0.1); 
+            padding: 10px; border-radius: 8px; font-size: 0.85rem; 
+            margin-bottom: 1.5rem; display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">LiveEmotion</div>
+        <p class="subtitle" id="mode-subtitle">Enter your credentials to continue</p>
+        
+        <div id="error-box" class="error-msg"></div>
+
+        <form id="auth-form">
+            <div class="form-group">
+                <label for="username">USERNAME</label>
+                <input type="text" id="username" placeholder="Enter username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">PASSWORD</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <div class="form-group" id="confirm-pass-group" style="display:none">
+                <label for="confirm-password">CONFIRM PASSWORD</label>
+                <input type="password" id="confirm-password" placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn" id="submit-btn">LOGIN</button>
+        </form>
+
+        <p class="toggle-mode" id="mode-toggle-text">
+            Don't have an account? <a id="toggle-btn">Sign up</a>
+        </p>
+    </div>
+
+    <script>
+        const form = document.getElementById('auth-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const confirmPassGroup = document.getElementById('confirm-pass-group');
+        const confirmPassInput = document.getElementById('confirm-password');
+        const subtitle = document.getElementById('mode-subtitle');
+        const toggleText = document.getElementById('mode-toggle-text');
+        const errorBox = document.getElementById('error-box');
+
+        let isLoginMode = true;
+
+        toggleBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                submitBtn.innerText = 'LOGIN';
+                subtitle.innerText = 'Enter your credentials to continue';
+                toggleText.innerHTML = `Don't have an account? <a id="toggle-btn-new">Sign up</a>`;
+                confirmPassGroup.style.display = 'none';
+                confirmPassInput.required = false;
+            } else {
+                submitBtn.innerText = 'CREATE ACCOUNT';
+                subtitle.innerText = 'Join the next generation of Emotion AI';
+                toggleText.innerHTML = `Already have an account? <a id="toggle-btn-new">Login</a>`;
+                confirmPassGroup.style.display = 'block';
+                confirmPassInput.required = true;
+            }
+            // Re-attach listener to new dynamic element
+            document.getElementById('toggle-btn-new').onclick = () => toggleBtn.click();
+            errorBox.style.display = 'none';
+        });
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            errorBox.style.display = 'none';
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!isLoginMode) {
+                const confirmPassword = confirmPassInput.value;
+                if (password !== confirmPassword) {
+                    showError("Passwords do not match");
+                    return;
+                }
+            }
+
+            const endpoint = isLoginMode ? '/login' : '/signup';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    const data = await response.json();
+                    showError(data.detail || "Authentication failed");
+                }
+            } catch (err) {
+                showError("Connection failed. Please try again.");
+            }
+        };
+
+        function showError(msg) {
+            errorBox.innerText = msg;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

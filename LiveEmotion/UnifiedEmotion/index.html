@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveEmotion | Multi-Modal AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #050510;
+            --card: rgba(20, 20, 35, 0.7);
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 242, 255, 0.15) 0%, transparent 40%);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        header { text-align: center; margin-bottom: 2rem; }
+        .logo { 
+            font-size: 2.5rem; font-weight: 800; 
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+        }
+
+        .capture-zone { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .video-wrapper {
+            position: relative;
+            background: var(--glass);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            aspect-ratio: 16/9;
+        }
+
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .face-box {
+            position: absolute; border: 2px solid var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+            border-radius: 4px; pointer-events: none; transition: 0.1s linear; display: none;
+        }
+
+        .controls {
+            background: var(--card); padding: 1.5rem; border-radius: 20px;
+            display: flex; justify-content: space-around; align-items: center; gap: 1rem;
+        }
+
+        .btn {
+            padding: 1rem 2rem; border-radius: 12px; border: none; font-weight: 600;
+            cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+        .btn-record { background: #ff4757; color: white; }
+        .btn-record.recording { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .results-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+        .card { 
+            background: var(--card); backdrop-filter: blur(20px); 
+            border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem;
+        }
+        h3 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--primary); opacity: 0.9; }
+
+        .emotion-item { margin-bottom: 0.8rem; }
+        .emotion-info { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; }
+        .prog-bg { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+        .prog-fill { height: 100%; transition: width 0.5s ease; }
+
+        .status-badge { 
+            font-size: 0.75rem; padding: 4px 10px; border-radius: 100px; 
+            background: rgba(0,255,122,0.1); color: #00ff7a; width: fit-content;
+        }
+        
+        #consensus-card {
+            background: linear-gradient(135deg, rgba(112,0,255,0.2), rgba(0,242,255,0.2));
+            text-align: center;
+        }
+        .consensus-emoji { font-size: 3rem; margin: 0.5rem 0; }
+        .consensus-label { font-size: 1.5rem; font-weight: 800; }
+
+        #loader {
+            position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+        }
+        .spinner { width: 50px; height: 50px; border: 3px solid var(--glass); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loader">
+        <div class="spinner"></div>
+        <p>Loading Multi-Modal AI Systems...</p>
+        <div id="load-status" style="font-size: 0.8rem; opacity: 0.6;">Initializing...</div>
+    </div>
+
+    <header>
+        <div style="position: absolute; right: 2rem; top: 2rem;">
+            <a href="/logout" class="btn" style="background: rgba(255, 71, 87, 0.1); color: #ff4757; text-decoration: none; font-size: 0.8rem; border: 1px solid rgba(255, 71, 87, 0.2);">LOGOUT</a>
+        </div>
+        <div class="logo">LiveEmotion</div>
+        <p style="opacity: 0.6; font-weight: 300;">Unified Video + Audio Emotion Analytics</p>
+    </header>
+
+    <main class="main-container">
+        <div class="capture-zone">
+            <div class="video-wrapper">
+                <video id="webcam" autoplay playsinline muted></video>
+                <div id="face-box" class="face-box"></div>
+            </div>
+
+            <div class="controls">
+                <button id="start-btn" class="btn btn-primary">START CAMERA</button>
+                <button id="record-btn" class="btn btn-record" style="display:none">START RECORDING</button>
+                <div id="mic-status" class="status-badge" style="display:none">MIC READY</div>
+            </div>
+        </div>
+
+        <div class="results-panel">
+            <div class="card" id="consensus-card">
+                <h3>Consensus</h3>
+                <div id="consensus-content">
+                    <div class="consensus-emoji">🎙️</div>
+                    <div class="consensus-label">Waiting...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Face Analysis</h3>
+                <div id="face-results">
+                    <p style="opacity:0.4; font-size:0.9rem;">Start camera to see results...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Voice Analysis</h3>
+                <div id="voice-results">
+                    <p style="opacity:0.4; font-size:0.9rem;">Record audio to see results...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const faceBox = document.getElementById('face-box');
+        const startBtn = document.getElementById('start-btn');
+        const recordBtn = document.getElementById('record-btn');
+        const loader = document.getElementById('loader');
+        const loadStatus = document.getElementById('load-status');
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let isCameraActive = false;
+        let faceInterval;
+        
+        let lastFaceResults = [];
+        let lastVoiceResults = [];
+
+        // 1. Loading Watcher
+        async function checkStatus() {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+                loadStatus.innerText = `Face: ${data.face.status} | Voice: ${data.voice.status}`;
+                
+                if (data.face.status === 'ready' && data.voice.status === 'ready') {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 500);
+                } else {
+                    setTimeout(checkStatus, 1500);
+                }
+            } catch (e) {
+                console.error(e);
+                setTimeout(checkStatus, 2000);
+            }
+        }
+        checkStatus();
+
+        // 2. Camera Management
+        startBtn.onclick = async () => {
+            if (isCameraActive) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                video.srcObject = stream;
+                isCameraActive = true;
+                startBtn.style.display = 'none';
+                recordBtn.style.display = 'flex';
+                document.getElementById('mic-status').style.display = 'block';
+                
+                // Start Face Detection Loop
+                faceInterval = setInterval(captureFace, 500);
+                
+                // Prepare Audio Recorder
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.onstop = sendVoice;
+            } catch (err) {
+                alert("Please allow Camera & Mic access.");
+            }
+        };
+
+        // 3. Face Analysis
+        async function captureFace() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.7);
+            try {
+                const res = await fetch('/analyze/face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+                const data = await res.json();
+                if (data.coords) {
+                    updateFaceBox(data.coords);
+                    lastFaceResults = data.emotions;
+                    renderResults('face-results', data.emotions);
+                    updateConsensus();
+                } else {
+                    faceBox.style.display = 'none';
+                }
+            } catch (e) {
+                console.error("Face capture failed", e);
+            }
+        }
+
+        function updateFaceBox(coords) {
+            const rect = video.getBoundingClientRect();
+            const sx = rect.width / video.videoWidth;
+            const sy = rect.height / video.videoHeight;
+            faceBox.style.display = 'block';
+            faceBox.style.width = (coords.w * sx) + 'px';
+            faceBox.style.height = (coords.h * sy) + 'px';
+            faceBox.style.left = (rect.width - (coords.x + coords.w) * sx) + 'px';
+            faceBox.style.top = (coords.y * sy) + 'px';
+        }
+
+        // 4. Voice Analysis
+        recordBtn.onclick = () => {
+            if (!isRecording) {
+                audioChunks = [];
+                mediaRecorder.start();
+                isRecording = true;
+                recordBtn.innerText = "STOP RECORDING";
+                recordBtn.classList.add('recording');
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordBtn.innerText = "START RECORDING";
+                recordBtn.classList.remove('recording');
+            }
+        };
+
+        async function sendVoice() {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+            
+            try {
+                const res = await fetch('/analyze/voice', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                lastVoiceResults = data.emotions;
+                renderResults('voice-results', data.emotions);
+                updateConsensus();
+            } catch (e) {
+                console.error("Voice capture failed", e);
+            }
+        }
+
+        // 5. UI Helpers
+        function renderResults(containerId, emotions) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            emotions.slice(0, 4).forEach(emo => {
+                container.innerHTML += `
+                    <div class="emotion-item">
+                        <div class="emotion-info">
+                            <span>${emo.emoji} ${emo.label}</span>
+                            <span>${emo.score}%</span>
+                        </div>
+                        <div class="prog-bg">
+                            <div class="prog-fill" style="width: ${emo.score}%; background: ${emo.color}"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateConsensus() {
+            if (lastFaceResults.length === 0 && lastVoiceResults.length === 0) return;
+            
+            // Simple weighted merging
+            const scores = {};
+            
+            // Give Face 60% and Voice 40% (since face is real-time high freq)
+            lastFaceResults.forEach(r => {
+                scores[r.label] = (scores[r.label] || 0) + (r.score * 0.6);
+            });
+            lastVoiceResults.forEach(r => {
+                scores[r.label] = (scores[r.label] || 0) + (r.score * 0.4);
+            });
+            
+            let bestLabel = "";
+            let maxScore = -1;
+            for (let lbl in scores) {
+                if (scores[lbl] > maxScore) {
+                    maxScore = scores[lbl];
+                    bestLabel = lbl;
+                }
+            }
+            
+            if (bestLabel) {
+                const items = lastFaceResults.concat(lastVoiceResults);
+                const match = items.find(i => i.label === bestLabel);
+                document.getElementById('consensus-content').innerHTML = `
+                    <div class="consensus-emoji">${match ? match.emoji : '😐'}</div>
+                    <div class="consensus-label" style="color: ${match ? match.color : 'white'}">${bestLabel}</div>
+                    <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 5px;">AI Multi-Modal Consensus</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

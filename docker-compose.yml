@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  unified-emotion:
+    build:
+      context: ./LiveEmotion/UnifiedEmotion
+    container_name: mh_unified_emotion
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  face-emotion:
+    build:
+      context: ./faceEmotion
+    container_name: mh_face_emotion
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  voice-emotion:
+    build:
+      context: ./voiceEmotion
+    container_name: mh_voice_emotion
+    ports:
+      - "8002:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  speech-to-text:
+    build:
+      context: ./speechToText
+    container_name: mh_speech_to_text
+    ports:
+      - "8003:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  user-login:
+    build:
+      context: ./userLogin
+    container_name: mh_user_login
+    ports:
+      - "8004:80"
+    restart: unless-stopped

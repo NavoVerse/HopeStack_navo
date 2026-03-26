@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceEmo — Emotion from Voice</title>
+  <meta name="description" content="AI-powered real-time emotion recognition from voice. Record your voice and discover what emotion it carries." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Root ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #07071a;
+      --surface: rgba(255,255,255,0.05);
+      --surface-hover: rgba(255,255,255,0.09);
+      --border: rgba(255,255,255,0.10);
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --accent: #7c3aed;
+      --accent2: #06b6d4;
+      --radius: 20px;
+      --transition: 0.3s cubic-bezier(.4,0,.2,1);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── Animated Background ──────────────────────────────────────────── */
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124,58,237,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(6,182,212,0.14) 0%, transparent 70%),
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(16,16,48,1) 0%, #07071a 100%);
+      animation: bgPulse 8s ease-in-out infinite alternate;
+    }
+    @keyframes bgPulse {
+      from { filter: hue-rotate(0deg); }
+      to { filter: hue-rotate(20deg); }
+    }
+
+    /* Floating orbs */
+    .orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.25; z-index: 0; animation: orbFloat linear infinite; }
+    .orb-1 { width: 400px; height: 400px; background: #7c3aed; top: -100px; left: -100px; animation-duration: 20s; }
+    .orb-2 { width: 300px; height: 300px; background: #06b6d4; bottom: -80px; right: -80px; animation-duration: 25s; animation-direction: reverse; }
+    .orb-3 { width: 250px; height: 250px; background: #f59e0b; top: 50%; left: 60%; animation-duration: 30s; }
+    @keyframes orbFloat {
+      0%   { transform: translate(0,0) scale(1); }
+      33%  { transform: translate(30px,-40px) scale(1.1); }
+      66%  { transform: translate(-20px,30px) scale(0.95); }
+      100% { transform: translate(0,0) scale(1); }
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────────── */
+    .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 32px 16px 64px; }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    .header { text-align: center; margin-bottom: 40px; }
+    .logo {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #38bdf8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    .logo-icon { font-size: 2.2rem; -webkit-text-fill-color: initial; }
+    .tagline { margin-top: 8px; color: var(--text-muted); font-size: 0.95rem; font-weight: 400; letter-spacing: 0.3px; }
+
+    /* ── Status pill ──────────────────────────────────────────────────── */
+    #status-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 6px 16px; border-radius: 100px;
+      font-size: 0.78rem; color: var(--text-muted);
+      margin-top: 14px; transition: var(--transition);
+    }
+    #status-badge .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #f59e0b; animation: blink 1.2s ease-in-out infinite;
+    }
+    #status-badge.ready .dot { background: #10b981; animation: none; }
+    #status-badge.error .dot { background: #ef4444; animation: none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── Main card ────────────────────────────────────────────────────── */
+    .card {
+      width: 100%; max-width: 680px;
+      background: rgba(15,15,40,0.7);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    /* ── Waveform canvas ──────────────────────────────────────────────── */
+    #waveform-wrap {
+      position: relative; height: 90px; margin-bottom: 28px;
+      background: rgba(0,0,0,0.25); border-radius: 12px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    #waveform-canvas { width: 100%; height: 100%; display: block; }
+    #waveform-placeholder {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 0.85rem; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    /* ── Record Button ────────────────────────────────────────────────── */
+    .record-section { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 28px; }
+
+    #btn-record {
+      position: relative; width: 90px; height: 90px; border-radius: 50%;
+      border: none; cursor: pointer; outline: none;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      box-shadow: 0 0 0 0 rgba(124,58,237,0.5), 0 8px 32px rgba(124,58,237,0.4);
+      transition: transform var(--transition), box-shadow var(--transition);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #btn-record:hover { transform: scale(1.06); box-shadow: 0 0 0 0 rgba(124,58,237,0.5), 0 12px 40px rgba(124,58,237,0.55); }
+    #btn-record.recording {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      animation: pulse-ring 1.4s ease-out infinite;
+      box-shadow: 0 0 0 0 rgba(239,68,68,0.5), 0 8px 32px rgba(239,68,68,0.4);
+    }
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.6), 0 8px 32px rgba(239,68,68,0.4); }
+      70%  { box-shadow: 0 0 0 24px rgba(239,68,68,0), 0 8px 32px rgba(239,68,68,0.4); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0), 0 8px 32px rgba(239,68,68,0.4); }
+    }
+    #btn-record .icon { font-size: 2rem; line-height: 1; transition: transform 0.2s; }
+    #btn-record:active .icon { transform: scale(0.88); }
+
+    #timer { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
+    #timer.active { color: #ef4444; }
+
+    #btn-label { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ── Divider ──────────────────────────────────────────────────────── */
+    .divider {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+      color: var(--text-muted); font-size: 0.78rem;
+    }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+
+    /* ── Upload zone ──────────────────────────────────────────────────── */
+    #upload-zone {
+      border: 2px dashed var(--border); border-radius: 12px;
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: var(--transition); margin-bottom: 28px;
+      color: var(--text-muted); font-size: 0.85rem;
+    }
+    #upload-zone:hover, #upload-zone.drag-over {
+      border-color: var(--accent); background: rgba(124,58,237,0.07); color: var(--text);
+    }
+    #upload-zone .upload-icon { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+    #file-input { display: none; }
+
+    /* ── Analyse button ───────────────────────────────────────────────── */
+    #btn-analyse {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      border: none; border-radius: 12px; cursor: pointer;
+      color: #fff; font-weight: 700; font-size: 1rem; letter-spacing: 0.3px;
+      transition: transform var(--transition), opacity var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 20px rgba(124,58,237,0.35);
+      display: none;
+    }
+    #btn-analyse:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,0.5); }
+    #btn-analyse:active { transform: translateY(0); }
+    #btn-analyse:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Loader ───────────────────────────────────────────────────────── */
+    #loader { display: none; flex-direction: column; align-items: center; gap: 14px; padding: 28px 0; }
+    .spinner {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loader p { color: var(--text-muted); font-size: 0.88rem; }
+
+    /* ── Result section ───────────────────────────────────────────────── */
+    #result { display: none; }
+
+    .result-header {
+      text-align: center; padding: 28px 20px 20px;
+      border-radius: 16px; margin-bottom: 24px;
+      position: relative; overflow: hidden;
+      transition: background 0.6s;
+    }
+    .result-header::before {
+      content: ''; position: absolute; inset: 0;
+      background: inherit; filter: blur(20px) opacity(0.4);
+      z-index: -1; transform: scale(1.3);
+    }
+    .result-emoji { font-size: 4.5rem; display: block; line-height: 1; margin-bottom: 12px; animation: emojiPop 0.5s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes emojiPop {
+      from { transform: scale(0) rotate(-15deg); opacity:0; }
+      to   { transform: scale(1) rotate(0); opacity:1; }
+    }
+    .result-emotion {
+      font-family: 'Space Grotesk', sans-serif; font-size: 2.4rem; font-weight: 700;
+      letter-spacing: -0.5px; line-height: 1;
+    }
+    .result-confidence { margin-top: 6px; font-size: 0.9rem; opacity: 0.75; font-weight: 500; }
+
+    /* ── Score bars ───────────────────────────────────────────────────── */
+    .scores-title {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--text-muted); margin-bottom: 14px; font-weight: 600;
+    }
+    .score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .score-emoji { font-size: 1.1rem; width: 24px; text-align: center; }
+    .score-label { width: 72px; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); flex-shrink: 0; }
+    .score-bar-wrap { flex: 1; background: rgba(255,255,255,0.06); border-radius: 100px; height: 8px; overflow: hidden; }
+    .score-bar { height: 100%; border-radius: 100px; width: 0; transition: width 1s cubic-bezier(.4,0,.2,1); }
+    .score-pct { width: 38px; text-align: right; font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    /* ── Try again button ─────────────────────────────────────────────── */
+    #btn-retry {
+      margin-top: 24px; width: 100%; padding: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; cursor: pointer; color: var(--text);
+      font-size: 0.9rem; font-weight: 500; transition: var(--transition);
+    }
+    #btn-retry:hover { background: var(--surface-hover); border-color: rgba(255,255,255,0.2); }
+
+    /* ── Error toast ──────────────────────────────────────────────────── */
+    #error-msg {
+      display: none; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 10px; padding: 12px 16px; color: #fca5a5;
+      font-size: 0.85rem; text-align: center; margin-top: 16px;
+    }
+
+    /* ── Tips ─────────────────────────────────────────────────────────── */
+    .tips {
+      margin-top: 28px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    }
+    .tip-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 100px; padding: 5px 14px;
+      font-size: 0.75rem; color: var(--text-muted);
+    }
+
+    /* ── Footer ───────────────────────────────────────────────────────── */
+    footer { margin-top: 40px; color: var(--text-muted); font-size: 0.75rem; text-align: center; }
+
+    /* ── Responsive ───────────────────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .card { padding: 24px 18px; }
+      .result-emotion { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">🎙️</span>
+      VoiceEmo
+    </div>
+    <p class="tagline">AI-powered emotion recognition from your voice</p>
+    <div id="status-badge">
+      <div class="dot"></div>
+      <span id="status-text">Loading AI model…</span>
+    </div>
+  </header>
+
+  <!-- Main card -->
+  <main class="card" role="main">
+
+    <!-- Waveform -->
+    <div id="waveform-wrap" aria-hidden="true">
+      <canvas id="waveform-canvas"></canvas>
+      <div id="waveform-placeholder">🎵 Your voice waveform will appear here</div>
+    </div>
+
+    <!-- Recording controls -->
+    <div class="record-section">
+      <button id="btn-record" aria-label="Start recording" title="Click to record">
+        <span class="icon" id="record-icon">🎤</span>
+      </button>
+      <div id="timer">00:00</div>
+      <div id="btn-label">Click to record</div>
+    </div>
+
+    <!-- Upload -->
+    <div class="divider">or upload an audio file</div>
+    <div id="upload-zone" role="button" tabindex="0" aria-label="Upload audio file">
+      <span class="upload-icon">📂</span>
+      Drag & drop a <strong>.wav / .mp3</strong> file, or click to browse
+    </div>
+    <input type="file" id="file-input" accept=".wav,.mp3,.ogg,.flac,.m4a,audio/*" />
+
+    <!-- Analyse -->
+    <button id="btn-analyse" aria-label="Analyse emotion">✨ Analyse Emotion</button>
+
+    <!-- Loader -->
+    <div id="loader" role="status" aria-live="polite">
+      <div class="spinner"></div>
+      <p>Analysing your voice…</p>
+    </div>
+
+    <!-- Result -->
+    <section id="result" aria-live="polite">
+      <div class="result-header" id="result-header">
+        <span class="result-emoji" id="result-emoji">😊</span>
+        <div class="result-emotion" id="result-emotion">Happy</div>
+        <div class="result-confidence" id="result-confidence">Confidence: 94.3%</div>
+      </div>
+
+      <div class="scores-title">All Emotion Scores</div>
+      <div id="scores-list"></div>
+
+      <button id="btn-retry">🔄 Try Again</button>
+    </section>
+
+    <!-- Error -->
+    <div id="error-msg" role="alert"></div>
+
+  </main>
+
+  <!-- Tips -->
+  <div class="tips" aria-label="Tips for best results">
+    <div class="tip-chip">💡 Speak clearly for 2–5 seconds</div>
+    <div class="tip-chip">🔇 Reduce background noise</div>
+    <div class="tip-chip">😠 Try an exaggerated tone</div>
+  </div>
+
+  <footer>
+    Powered by HuBERT · Hugging Face Transformers · FastAPI
+  </footer>
+
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const POLL_INTERVAL = 2500;
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const btnRecord     = document.getElementById('btn-record');
+const recordIcon    = document.getElementById('record-icon');
+const timerEl       = document.getElementById('timer');
+const btnLabelEl    = document.getElementById('btn-label');
+const waveCanvas    = document.getElementById('waveform-canvas');
+const waveCtx       = waveCanvas.getContext('2d');
+const waveHolder    = document.getElementById('waveform-placeholder');
+const uploadZone    = document.getElementById('upload-zone');
+const fileInput     = document.getElementById('file-input');
+const btnAnalyse    = document.getElementById('btn-analyse');
+const loader        = document.getElementById('loader');
+const resultSection = document.getElementById('result');
+const resultHeader  = document.getElementById('result-header');
+const resultEmoji   = document.getElementById('result-emoji');
+const resultEmotion = document.getElementById('result-emotion');
+const resultConf    = document.getElementById('result-confidence');
+const scoresList    = document.getElementById('scores-list');
+const btnRetry      = document.getElementById('btn-retry');
+const errorMsg      = document.getElementById('error-msg');
+const statusBadge   = document.getElementById('status-badge');
+const statusText    = document.getElementById('status-text');
+
+// ── State ──────────────────────────────────────────────────────────────────
+let mediaRecorder   = null;
+let audioChunks     = [];
+let audioBlob       = null;
+let isRecording     = false;
+let timerInterval   = null;
+let seconds         = 0;
+let animFrame       = null;
+let analyser        = null;
+let audioCtx        = null;
+let sourceNode      = null;
+let modelReady      = false;
+
+// ── Model Status Polling ───────────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const res = await fetch('/status');
+    const data = await res.json();
+    statusText.textContent = data.message || data.status;
+    if (data.status === 'ready') {
+      statusBadge.className = 'ready';
+      modelReady = true;
+      return; // stop polling
+    } else if (data.status === 'error') {
+      statusBadge.className = 'error';
+      return;
+    }
+  } catch (e) { /* ignore network errors during polling */ }
+  setTimeout(pollStatus, POLL_INTERVAL);
+}
+pollStatus();
+
+// ── Waveform Visualiser ────────────────────────────────────────────────────
+function resizeCanvas() {
+  const wrap = document.getElementById('waveform-wrap');
+  waveCanvas.width  = wrap.clientWidth  * window.devicePixelRatio;
+  waveCanvas.height = wrap.clientHeight * window.devicePixelRatio;
+  waveCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function drawIdle() {
+  const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
+  waveCtx.clearRect(0, 0, w, h);
+  waveCtx.beginPath();
+  waveCtx.strokeStyle = 'rgba(124,58,237,0.3)';
+  waveCtx.lineWidth = 2;
+  for (let x = 0; x < w; x++) {
+    const y = h / 2 + Math.sin((x / w) * Math.PI * 4 + Date.now() / 600) * 6;
+    x === 0 ? waveCtx.moveTo(x, y) : waveCtx.lineTo(x, y);
+  }
+  waveCtx.stroke();
+  animFrame = requestAnimationFrame(drawIdle);
+}
+
+function drawLive() {
+  if (!analyser) return;
+  const bufLen = analyser.frequencyBinCount;
+  const dataArr = new Uint8Array(bufLen);
+  analyser.getByteTimeDomainData(dataArr);
+  const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
+  waveCtx.clearRect(0, 0, w, h);
+
+  // Gradient line
+  const grad = waveCtx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, '#7c3aed');
+  grad.addColorStop(0.5, '#06b6d4');
+  grad.addColorStop(1, '#7c3aed');
+  waveCtx.strokeStyle = grad;
+  waveCtx.lineWidth = 2.5;
+  waveCtx.beginPath();
+
+  const sliceW = w / bufLen;
+  let x = 0;
+  for (let i = 0; i < bufLen; i++) {
+    const v = dataArr[i] / 128.0;
+    const y = (v * h) / 2;
+    i === 0 ? waveCtx.moveTo(x, y) : waveCtx.lineTo(x, y);
+    x += sliceW;
+  }
+  waveCtx.lineTo(w, h / 2);
+  waveCtx.stroke();
+  animFrame = requestAnimationFrame(drawLive);
+}
+
+function startIdleAnim() {
+  cancelAnimationFrame(animFrame);
+  drawIdle();
+}
+startIdleAnim();
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+function startTimer() {
+  seconds = 0;
+  timerEl.textContent = '00:00';
+  timerEl.classList.add('active');
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerEl.classList.remove('active');
+}
+
+// ── Recording ──────────────────────────────────────────────────────────────
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // Set up WebAudio analyser
+    audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    analyser  = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    sourceNode = audioCtx.createMediaStreamSource(stream);
+    sourceNode.connect(analyser);
+
+    // Choose best MIME
+    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg']
+      .find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+      stream.getTracks().forEach(t => t.stop());
+      // Convert to WAV before showing Analyse button
+      convertToWav(audioBlob).then(wavBlob => {
+        audioBlob = wavBlob;
+        showAnalyseButton();
+      }).catch(() => {
+        showAnalyseButton(); // fallback: send as-is
+      });
+    };
+
+    mediaRecorder.start(100);
+    isRecording = true;
+    btnRecord.classList.add('recording');
+    recordIcon.textContent = '⏹️';
+    btnLabelEl.textContent = 'Click to stop';
+    waveHolder.style.opacity = '0';
+    cancelAnimationFrame(animFrame);
+    drawLive();
+    startTimer();
+    hideError();
+    hideResult();
+    btnAnalyse.style.display = 'none';
+
+  } catch (err) {
+    showError('Microphone access denied. Please allow microphone access and try again.');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  isRecording = false;
+  btnRecord.classList.remove('recording');
+  recordIcon.textContent = '🎤';
+  btnLabelEl.textContent = 'Click to record again';
+  stopTimer();
+  cancelAnimationFrame(animFrame);
+  startIdleAnim();
+  waveHolder.style.opacity = '0';
+  if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+  if (audioCtx)   { audioCtx.close(); audioCtx = null; }
+  analyser = null;
+}
+
+btnRecord.addEventListener('click', () => {
+  if (isRecording) stopRecording();
+  else startRecording();
+});
+
+// ── WAV Conversion (browser-side) ──────────────────────────────────────────
+async function convertToWav(blob) {
+  const arrayBuffer = await blob.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  const decoded = await ctx.decodeAudioData(arrayBuffer);
+  await ctx.close();
+
+  const numChannels = 1; // mono
+  const sampleRate  = decoded.sampleRate;
+  const samples     = decoded.getChannelData(0); // take left channel
+  const pcm         = new Int16Array(samples.length);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    pcm[i] = s < 0 ? s * 32768 : s * 32767;
+  }
+
+  const wavBuffer = encodeWAV(pcm, numChannels, sampleRate);
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
+function encodeWAV(samples, numChannels, sampleRate) {
+  const bitsPerSample = 16;
+  const byteRate  = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize  = samples.length * (bitsPerSample / 8);
+  const buffer    = new ArrayBuffer(44 + dataSize);
+  const view      = new DataView(buffer);
+
+  const write = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+  write(0,  'RIFF');
+  view.setUint32(4,  36 + dataSize, true);
+  write(8,  'WAVE');
+  write(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1,  true);  // PCM
+  view.setUint16(22, numChannels,  true);
+  view.setUint32(24, sampleRate,   true);
+  view.setUint32(28, byteRate,     true);
+  view.setUint16(32, blockAlign,   true);
+  view.setUint16(34, bitsPerSample,true);
+  write(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  const offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    view.setInt16(offset + i * 2, samples[i], true);
+  }
+  return buffer;
+}
+
+// ── Upload Zone ────────────────────────────────────────────────────────────
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleUploadedFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleUploadedFile(fileInput.files[0]);
+});
+
+function handleUploadedFile(file) {
+  audioBlob = file;
+  uploadZone.innerHTML = `<span class="upload-icon">✅</span><strong>${file.name}</strong> loaded (${(file.size/1024).toFixed(1)} KB)`;
+  showAnalyseButton();
+  hideError();
+  hideResult();
+  if (isRecording) stopRecording();
+}
+
+// ── Analyse ────────────────────────────────────────────────────────────────
+function showAnalyseButton() {
+  btnAnalyse.style.display = 'block';
+}
+
+btnAnalyse.addEventListener('click', analyse);
+
+async function analyse() {
+  if (!audioBlob) return showError('No audio recorded or uploaded yet.');
+  if (!modelReady) return showError('AI model is still loading. Please wait a moment and try again.');
+
+  btnAnalyse.disabled = true;
+  hideError();
+  hideResult();
+  showLoader();
+
+  const formData = new FormData();
+  const filename = audioBlob.name || 'recording.wav';
+  formData.append('audio', audioBlob, filename);
+
+  try {
+    const res = await fetch('/predict', { method: 'POST', body: formData });
+    const data = await res.json();
+    hideLoader();
+    if (!res.ok) {
+      showError(data.detail || `Server error ${res.status}`);
+    } else {
+      showResult(data);
+    }
+  } catch (err) {
+    hideLoader();
+    showError('Could not reach the server. Make sure the backend is running.');
+  } finally {
+    btnAnalyse.disabled = false;
+  }
+}
+
+// ── Result Rendering ───────────────────────────────────────────────────────
+function showResult(data) {
+  resultSection.style.display = 'block';
+  resultEmoji.textContent     = data.emoji;
+  resultEmotion.textContent   = data.emotion;
+  resultConf.textContent      = `Confidence: ${data.confidence}%`;
+
+  // Header background
+  const col = data.color || '#7c3aed';
+  resultHeader.style.background = `linear-gradient(135deg, ${col}22, ${col}11)`;
+  resultHeader.style.borderLeft = `4px solid ${col}`;
+  resultHeader.style.color      = col;
+
+  // Scores
+  scoresList.innerHTML = '';
+  data.all_scores.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'score-row';
+    row.innerHTML = `
+      <span class="score-emoji">${s.emoji}</span>
+      <span class="score-label">${s.label}</span>
+      <div class="score-bar-wrap">
+        <div class="score-bar" data-pct="${s.score}" style="background:${s.color || col}"></div>
+      </div>
+      <span class="score-pct">${s.score}%</span>
+    `;
+    scoresList.appendChild(row);
+  });
+
+  // Animate bars after paint
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.score-bar').forEach(bar => {
+      bar.style.width = bar.dataset.pct + '%';
+    });
+  });
+
+  // Smooth scroll
+  resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function hideResult() {
+  resultSection.style.display = 'none';
+}
+
+// ── Try Again ──────────────────────────────────────────────────────────────
+btnRetry.addEventListener('click', () => {
+  hideResult();
+  audioBlob = null;
+  btnAnalyse.style.display = 'none';
+  uploadZone.innerHTML = '<span class="upload-icon">📂</span>Drag & drop a <strong>.wav / .mp3</strong> file, or click to browse';
+  fileInput.value = '';
+  timerEl.textContent = '00:00';
+  btnLabelEl.textContent = 'Click to record';
+  waveHolder.style.opacity = '1';
+});
+
+// ── Loader helpers ─────────────────────────────────────────────────────────
+function showLoader() { loader.style.display = 'flex'; }
+function hideLoader() { loader.style.display = 'none'; }
+
+// ── Error helpers ──────────────────────────────────────────────────────────
+function showError(msg) {
+  errorMsg.textContent = '⚠️ ' + msg;
+  errorMsg.style.display = 'block';
+}
+function hideError() { errorMsg.style.display = 'none'; }
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopeStack | Central Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <main class="container">
+        <header class="header">
+            <div class="logo-container">
+                <i class="fa-solid fa-brain logo-icon"></i>
+                <h1 class="logo-text">HopeStack<span class="highlight">_Navo</span></h1>
+            </div>
+            <p class="subtitle">Unified Mental Health & Emotion Recognition AI</p>
+        </header>
+
+        <section class="modules-grid">
+            <!-- Unified System -->
+            <a href="http://localhost:8080" class="module-card featured" target="_blank">
+                <div class="card-glow"></div>
+                <div class="card-content">
+                    <div class="icon-wrapper primary">
+                        <i class="fa-solid fa-infinity"></i>
+                    </div>
+                    <h2>Unified Emotion AI</h2>
+                    <p>Live multi-modal emotion recognition combining facial expressions and voice tone. Includes integrated user authentication.</p>
+                    <div class="status-badge online"><i class="fa-solid fa-circle"></i> Port 8080</div>
+                </div>
+            </a>
+
+            <!-- Face Emotion -->
+            <a href="http://localhost:8001" class="module-card" target="_blank">
+                <div class="card-content">
+                    <div class="icon-wrapper secondary">
+                        <i class="fa-regular fa-face-smile"></i>
+                    </div>
+                    <h2>Facial Recognition API</h2>
+                    <p>Standalone service for detecting discrete facial emotions from image frames using OpenCV and Transformers.</p>
+                    <div class="status-badge online"><i class="fa-solid fa-circle"></i> Port 8001</div>
+                </div>
+            </a>
+
+            <!-- Voice Emotion -->
+            <a href="http://localhost:8002" class="module-card" target="_blank">
+                <div class="card-content">
+                    <div class="icon-wrapper accent">
+                        <i class="fa-solid fa-microphone-lines"></i>
+                    </div>
+                    <h2>Vocal Tone Analyzer</h2>
+                    <p>Audio processing module designed to predict emotional state natively from WAV files via Librosa.</p>
+                    <div class="status-badge online"><i class="fa-solid fa-circle"></i> Port 8002</div>
+                </div>
+            </a>
+
+            <!-- Speech to Text -->
+            <a href="http://localhost:8003" class="module-card" target="_blank">
+                <div class="card-content">
+                    <div class="icon-wrapper info">
+                        <i class="fa-solid fa-comment-dots"></i>
+                    </div>
+                    <h2>Speech to Text</h2>
+                    <p>Fast transcription service utilizing the Whisper model to precisely document real-time speech into logs.</p>
+                    <div class="status-badge online"><i class="fa-solid fa-circle"></i> Port 8003</div>
+                </div>
+            </a>
+
+            <!-- User Login -->
+            <a href="http://localhost:8004" class="module-card" target="_blank">
+                <div class="card-content">
+                    <div class="icon-wrapper locked">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h2>Authentication Portal</h2>
+                    <p>General isolated platform UI mock for onboarding, authentication, and secure routing.</p>
+                    <div class="status-badge online"><i class="fa-solid fa-circle"></i> Port 8004</div>
+                </div>
+            </a>
+        </section>
+    </main>
+
+    <script>
+        // Simple 3D hover effect for cards
+        document.querySelectorAll('.module-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = ((y - centerY) / centerY) * -10;
+                const rotateY = ((x - centerX) / centerX) * 10;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                
+                if (card.classList.contains('featured')) {
+                    const glow = card.querySelector('.card-glow');
+                    glow.style.left = `${x}px`;
+                    glow.style.top = `${y}px`;
+                    glow.style.opacity = '1';
+                }
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+                if (card.classList.contains('featured')) {
+                    const glow = card.querySelector('.card-glow');
+                    glow.style.opacity = '0';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

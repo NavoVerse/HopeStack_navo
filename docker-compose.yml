@@ -48,3 +48,11 @@ services:
     ports:
       - "8004:80"
     restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./gateway
+    container_name: mh_gateway
+    ports:
+      - "80:80"
+    restart: unless-stopped
